@@ -1,0 +1,27 @@
+#!/bin/bash
+
+function wait_for_dpkg_lock {
+  # check for a lock on dpkg (another installation is running)
+  lsof /var/lib/dpkg/lock > /dev/null
+  dpkg_is_locked="$?"
+  if [ "$dpkg_is_locked" == "0" ]; then
+    echo "Waiting for another installation to finish"
+    sleep 5
+    wait_for_dpkg_lock
+  fi
+}
+
+# Install AWS CodeStar remote access management.
+# Allows project members to remotely access Amazon EC2 instances running Linux associated with the project.
+wget -O /usr/local/bin/get_authorized_keys https://s3.amazonaws.com/awscodestar-remote-access-us-east-1/get_authorized_keys
+chmod 755 /usr/local/bin/get_authorized_keys
+echo 'AuthorizedKeysCommand /usr/local/bin/get_authorized_keys' >> /etc/ssh/sshd_config
+echo 'AuthorizedKeysCommandUser root' >> /etc/ssh/sshd_config
+service sshd restart
+wait_for_dpkg_lock
+apt-get install python-pip -y
+pip install --upgrade --user awscli
+# Install pip and python dev libraries.
+pip install boto3
+pip install boto
+pip install pycrypto
